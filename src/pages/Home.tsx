@@ -4,6 +4,7 @@ import { Header } from "../components/header";
 import { SCWContext } from "../context/SCWallet";
 import { Mint } from "../components/mint";
 import { Deploy } from "../components/deploy";
+import { Owner } from "../components/owner";
 
 export const Home = () => {
   const { address, isConnecting, isDisconnected } = useAccount();
@@ -24,6 +25,8 @@ export const Home = () => {
         {sCWAddress && (
           <div>
             <Mint />
+            <br />
+            <Owner />
             <br />
             <Deploy />
           </div>

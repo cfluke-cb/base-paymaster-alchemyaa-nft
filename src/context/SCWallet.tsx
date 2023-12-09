@@ -21,13 +21,19 @@ export const SCWContext = createContext<{
   sCWAddress?: string;
   sCWClient?: PublicErc4337Client<HttpTransport>;
   sCWSigner?: AlchemyProvider;
+  updateSCW?: (newAddress: string) => void;
 }>({});
 
 const rpcUrl =
   "https://base-goerli.g.alchemy.com/v2/" + import.meta.env.VITE_ALCHEMY_ID;
 
+/*
+const rpcUrl =
+  "https://base-mainnet.g.alchemy.com/v2/" + import.meta.env.VITE_ALCHEMY_ID;
+*/
 export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
   const [sCWAddress, setSCWAddress] = useState("");
+  const [ownerAddress, setOwnerAddress] = useState("");
   const sCWSigner = useRef({});
   const sCWClient = useRef({});
   const account = useAccount();
@@ -35,8 +41,11 @@ export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
   const ownerResult = useLightAccountSigner();
 
   useMemo(async () => {
-    if (!account || !network?.chain || ownerResult.isLoading) return;
-    const chain: Chain = network.chain!;
+    const ownerAddr = await ownerResult?.owner?.getAddress();
+    if (ownerAddr) setOwnerAddress(ownerAddr);
+  }, [ownerResult.isLoading]);
+
+  const setupSCW = async (chain: Chain, accountAddress?: `0x${string}`) => {
     const baseSigner = new AlchemyProvider({
       rpcUrl,
       chain,
@@ -44,13 +53,15 @@ export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
         txMaxRetries: 60,
       },
     }).connect((provider) => {
-      return new LightSmartContractAccount({
+      let lsca = {
         chain,
         owner: ownerResult.owner!,
         entryPointAddress: getDefaultEntryPointAddress(chain),
         factoryAddress: getDefaultLightAccountFactoryAddress(chain),
         rpcClient: provider,
-      });
+      } as any;
+      if (accountAddress?.length > 3) lsca.accountAddress = accountAddress;
+      return new LightSmartContractAccount(lsca);
     });
 
     const smartAccountAddress = await baseSigner.getAddress();
@@ -115,8 +126,12 @@ export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
             nonce: toHex(Number(params1.nonce)),
             sender: smartAccountAddress,
             callGasLimit: toHex(Number(params1.callGasLimit)),
-            preVerificationGas: toHex(Number(params1.preVerificationGas)),
-            verificationGasLimit: toHex(Number(params1.verificationGasLimit)),
+            preVerificationGas: toHex(
+              Number(params1.preVerificationGas) + 5000
+            ),
+            verificationGasLimit: toHex(
+              Number(params1.verificationGasLimit) + 10000
+            ),
             maxFeePerGas: toHex(Number(params1.maxFeePerGas)),
             maxPriorityFeePerGas: toHex(Number(params1.maxPriorityFeePerGas)),
           },
@@ -147,6 +162,15 @@ export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
       paymasterDataMiddleware,
     });
 
+    return smartAccountSigner;
+  };
+
+  const updateSCW = async (newAddress: `0x${string}`) => {
+    const chain: Chain = network.chain!;
+    console.log(chain);
+
+    const smartAccountSigner = await setupSCW(chain, newAddress);
+
     sCWSigner.current = smartAccountSigner;
     console.log(sCWSigner.current);
     const client = createPublicErc4337Client({
@@ -154,12 +178,29 @@ export const SCWalletContext = ({ children }: React.PropsWithChildren) => {
       rpcUrl,
     });
     sCWClient.current = client;
-  }, [account?.address, network?.chain?.id, ownerResult.isLoading]);
+  };
+
+  useMemo(async () => {
+    if (!account || !network?.chain || ownerAddress.length < 1) return;
+    const chain: Chain = network.chain!;
+    console.log(chain);
+
+    const smartAccountSigner = await setupSCW(chain);
+
+    sCWSigner.current = smartAccountSigner;
+    console.log(sCWSigner.current);
+    const client = createPublicErc4337Client({
+      chain,
+      rpcUrl,
+    });
+    sCWClient.current = client;
+  }, [account?.address, network?.chain?.id, ownerAddress]);
 
   const state = {
     sCWAddress,
     sCWSigner: sCWSigner.current,
     sCWClient: sCWClient.current,
+    updateSCW,
   };
 
   return <SCWContext.Provider value={state}>{children}</SCWContext.Provider>;

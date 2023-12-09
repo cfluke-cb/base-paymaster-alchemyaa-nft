@@ -24,9 +24,12 @@ export const Deploy = () => {
       return;
     setisDeploying(true);
     try {
+      const fmtAbi = JSON.parse(abi);
+      console.log(fmtAbi);
       const conData = encodeDeployData({
-        abi,
+        abi: fmtAbi,
         bytecode,
+        //args: [sCWAddress],
       });
 
       const nonce = await sCWSigner.account.getNonce();
@@ -34,7 +37,7 @@ export const Deploy = () => {
         "0x0000000000000000000000000000000000000000000000000000000000000000";
       const nonceLength = String(nonce).length;
       const salt = zeros.slice(0, zeros.length - nonceLength) + String(nonce);
-      console.log("salt", salt);
+      console.log("salt", salt, conData);
 
       const mintDeployTxnHash = await sCWSigner.sendTransaction({
         from: sCWAddress,

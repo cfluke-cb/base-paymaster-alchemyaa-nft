@@ -14,7 +14,7 @@ export const Mint = () => {
     setIsMinting(true);
     try {
       const mintDeployTxnHash = await sCWSigner.sendTransaction({
-        from: sCWAddress,
+        from: sCWAddress as `0x${string}`,
         to: nftAddr,
         data: encodeFunctionData({
           abi: NFTContractABI.abi,

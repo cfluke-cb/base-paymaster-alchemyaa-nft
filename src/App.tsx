@@ -6,14 +6,14 @@ import {
 } from "@rainbow-me/rainbowkit";
 import { injectedWallet } from "@rainbow-me/rainbowkit/wallets";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
-import { baseGoerli } from "wagmi/chains";
+import { baseGoerli, base } from "wagmi/chains";
 import { alchemyProvider } from "wagmi/providers/alchemy";
 import { publicProvider } from "wagmi/providers/public";
 import { Home } from "./pages/Home";
 import { SCWalletContext } from "./context/SCWallet";
 
 const { chains, publicClient } = configureChains(
-  [baseGoerli],
+  [baseGoerli, base],
   [
     alchemyProvider({ apiKey: import.meta.env.VITE_ALCHEMY_ID }),
     publicProvider(),
